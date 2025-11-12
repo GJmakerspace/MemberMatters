@@ -348,9 +348,9 @@ SIMPLE_JWT = {
 # Internationalization
 # https://docs.djangoproject.com/en/2.0/topics/i18n/
 
-LANGUAGE_CODE = os.getenv("MM_LANGUAGE_CODE", "en-au")
+LANGUAGE_CODE = os.getenv("MM_LANGUAGE_CODE", "en-us")
 
-TIME_ZONE = os.getenv("MM_TIME_ZONE", "Australia/Brisbane")
+TIME_ZONE = os.getenv("MM_TIME_ZONE", "America/Denver")
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
