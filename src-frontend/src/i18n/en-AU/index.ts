@@ -40,6 +40,9 @@ export default {
     checkAccess: 'Access Permissions',
     memberbucks: 'Spacebucks',
     membershipPlan: 'Membership Plan',
+    information: 'Information Pages',
+    informationAbout: 'About This Space',
+    informationGuide: 'Member Guide',
 
     Error404: 'Page Not Found',
     Error403: 'Error 403',
@@ -104,6 +107,101 @@ export default {
       'This is an open source membership portal for managing makerspaces and community ' +
       'groups. It was originally created by Jaimyn Mayer but is now used by several spaces.',
     linkText: 'on GitHub',
+  },
+  information: {
+    labels: {
+      email: 'Email',
+      phone: 'Phone',
+      twitter: 'Twitter',
+      facebook: 'Facebook',
+      generalContact: 'General contact',
+      sysadminContact: 'Sysadmin contact',
+      postalAddress: 'Postal address',
+    },
+    about: {
+      title: 'About {siteName}',
+      description:
+        '{siteName} uses MemberMatters to help manage memberships, access control and ' +
+        'communication for {siteOwner}.',
+      highlightsTitle: 'What you can do here',
+      highlights: {
+        membership:
+          'Track your membership status and billing details in one place.',
+        community:
+          'Find the tools and resources your community shares with members.',
+        tools:
+          'Launch member tools such as access checks, webcams or swipe history when enabled.',
+        support:
+          'Report issues and reach out to the team when you need assistance.',
+      },
+      contactTitle: 'Contact details',
+      contactDescription:
+        'If you need help with your account, billing or access, use the contact points below.',
+      noContact: 'This space has not published contact details yet.',
+    },
+    guide: {
+      title: '{siteName} member information',
+      introduction:
+        'Use these quick reminders to help new and existing members find the essentials they need in MemberMatters.',
+      gettingStarted: {
+        title: 'Getting started',
+        description: 'Begin with the basics so your account stays up to date.',
+        profile: {
+          title: 'Review your profile',
+          caption:
+            'Confirm your name, pronouns and contact details so organisers can reach you.',
+        },
+        access: {
+          title: 'Check access',
+          caption:
+            'Open the Access Permissions page to see where your card works and what to expect.',
+        },
+        billing: {
+          title: 'Confirm billing',
+          caption:
+            'Update your membership plan or billing method before your next renewal.',
+        },
+      },
+      onsite: {
+        title: 'When you are on site',
+        description:
+          'Keep track of activity and stay aware of current expectations.',
+        signin: {
+          title: 'Sign in and out',
+          caption:
+            'Use the dashboard check-in controls or kiosk mode where available.',
+        },
+        swipes: {
+          title: 'View swipe history',
+          caption:
+            'Recent swipes help you verify that doors and tools registered your access attempts.',
+        },
+        rules: {
+          title: 'Know the basics',
+          caption:
+            'Share a brief overview of safety, cleaning and closing procedures for the space.',
+        },
+      },
+      support: {
+        title: 'Support and updates',
+        description: 'Point members toward the fastest ways to get assistance.',
+        issue: {
+          title: 'Report an issue',
+          caption:
+            'Use the Report Issue page to let organisers know about problems on site.',
+        },
+        contact: {
+          title: 'Reach the team',
+          caption:
+            'Include the best email, phone number or chat channel for time-sensitive questions.',
+        },
+        updates: {
+          title: 'Stay informed',
+          caption:
+            'Direct members to metrics, news posts or status channels for operational updates.',
+        },
+      },
+    },
   },
   stats: {
     title: 'Stats and Metrics',
