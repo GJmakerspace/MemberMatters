@@ -247,6 +247,30 @@ const PageAndRouteConfig: PageAndRouteConfigType[] = [
     ],
   },
   {
+    icon: icons.info,
+    name: 'information',
+    loggedIn: true,
+    kiosk: true,
+    children: [
+      {
+        icon: icons.info,
+        to: '/information/about',
+        name: 'informationAbout',
+        loggedIn: true,
+        kiosk: true,
+        component: () => import('pages/Information/About.vue'),
+      },
+      {
+        icon: icons.info,
+        to: '/information/guide',
+        name: 'informationGuide',
+        loggedIn: true,
+        kiosk: true,
+        component: () => import('pages/Information/Guide.vue'),
+      },
+    ],
+  },
+  {
     icon: icons.signout,
     to: '/logout',
     name: 'logout',
