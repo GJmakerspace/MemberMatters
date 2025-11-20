@@ -55,6 +55,10 @@ export default {
   edit: 'mdi-pencil',
   delete: 'mdi-delete',
   billing: 'mdi-credit-card',
+  location: 'mdi-map-marker',
+  phone: 'mdi-phone',
+  twitter: 'mdi-twitter',
+  facebook: 'mdi-facebook',
   visibility: 'mdi-eye',
   visibilityOff: 'mdi-eye-off',
 
