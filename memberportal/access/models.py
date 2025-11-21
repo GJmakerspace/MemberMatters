@@ -407,6 +407,29 @@ class Interlock(ExportModelOperationsMixin("interlock"), AccessControlledDevice)
     def get_active_sessions(self):
         return InterlockLog.objects.filter(interlock=self, date_ended=None).all()
 
+    def get_active_reservation(self, timestamp=None):
+        now = timestamp or timezone.now()
+        return (
+            self.reservations.filter(
+                cancelled=False,
+                start_time__lte=now,
+                end_time__gte=now,
+            )
+            .select_related("user__profile")
+            .order_by("start_time")
+            .first()
+        )
+
+    def has_reservation_conflict(self, start_time, end_time, exclude=None):
+        reservations = self.reservations.filter(
+            cancelled=False, start_time__lt=end_time, end_time__gt=start_time
+        )
+
+        if exclude:
+            reservations = reservations.exclude(id=exclude)
+
+        return reservations.exists()
+
     def session_start(self, user):
         self.session_end_all(reason="new_session")
         return InterlockLog.objects.create(interlock=self, user_started=user)
@@ -434,9 +457,19 @@ class Interlock(ExportModelOperationsMixin("interlock"), AccessControlledDevice)
         profile.last_seen = timezone.now()
         profile.save()
 
+        message_type = log_type
+        if log_type not in [
+            "activated",
+            "left_on",
+            "deactivated",
+            "locked_out",
+            "not_signed_in",
+        ]:
+            message_type = "rejected"
+
         if self.post_to_discord:
             post_interlock_swipe_to_discord(
-                profile.get_full_name(), self.name, type=log_type
+                profile.get_full_name(), self.name, type=message_type
             )
 
         if log_type == "activated":
@@ -565,3 +598,46 @@ class InterlockLog(ExportModelOperationsMixin("interlock-log"), models.Model):
             )
 
             return True
+
+
+class InterlockReservation(
+    ExportModelOperationsMixin("interlock-reservation"), models.Model
+):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
+    interlock = models.ForeignKey(
+        Interlock, on_delete=models.CASCADE, related_name="reservations"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="interlock_reservations",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_interlock_reservations",
+    )
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    cancelled = models.BooleanField(default=False)
+    cancellation_reason = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["start_time"]
+        verbose_name = "Interlock Reservation"
+        verbose_name_plural = "Interlock Reservations"
+
+    def __str__(self):
+        return (
+            f"{self.interlock.name} reserved for {self.user.get_full_name()} "
+            f"from {self.start_time} to {self.end_time}"
+        )
+
+    @property
+    def is_active(self):
+        now = timezone.now()
+        return not self.cancelled and self.start_time <= now and self.end_time >= now

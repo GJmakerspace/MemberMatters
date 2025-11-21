@@ -1,6 +1,7 @@
 from access.models import (
     Doors,
     Interlock,
+    InterlockReservation,
     MemberbucksDevice,
     HasExternalAccessControlAPIKey,
 )
@@ -10,7 +11,71 @@ import api_access.metrics as metrics
 from rest_framework import status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from collections import defaultdict
+from datetime import timedelta
+
 from constance import config
+from django.db.models import Q
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+
+
+def serialise_reservation(reservation):
+    return {
+        "id": str(reservation.id),
+        "interlockId": reservation.interlock_id,
+        "userId": reservation.user_id,
+        "userName": (
+            reservation.user.profile.get_full_name() if reservation.user_id else None
+        ),
+        "startTime": reservation.start_time,
+        "endTime": reservation.end_time,
+        "createdById": reservation.created_by_id,
+        "createdByName": (
+            reservation.created_by.profile.get_full_name()
+            if reservation.created_by
+            else None
+        ),
+        "cancelled": reservation.cancelled,
+        "cancellationReason": reservation.cancellation_reason,
+    }
+
+
+def parse_aware_datetime(value):
+    parsed = parse_datetime(value) if value else None
+    if parsed and timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed, timezone.get_default_timezone())
+    return parsed
+
+
+def can_manage_interlock_reservations(user, interlock):
+    if user.is_staff or interlock.all_members:
+        return True
+
+    profile = getattr(user, "profile", None)
+    if not profile:
+        return False
+
+    return profile.interlocks.filter(pk=interlock.pk).exists()
+
+
+def get_reservable_interlocks(user):
+    interlocks = Interlock.objects.filter(hidden=False)
+
+    if user.is_staff:
+        return interlocks.order_by("name")
+
+    profile = getattr(user, "profile", None)
+    if not profile:
+        return interlocks.none()
+
+    return (
+        interlocks.filter(
+            Q(all_members=True) | Q(id__in=profile.interlocks.values("id"))
+        )
+        .distinct()
+        .order_by("name")
+    )
 
 
 class AccessSystemStatus(APIView):
@@ -120,6 +185,57 @@ class AccessSystemStatus(APIView):
         return Response(statusObject)
 
 
+class InterlockReservationsOverview(APIView):
+    """Return interlocks the user can reserve with their upcoming reservations."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        start = parse_aware_datetime(request.GET.get("start")) or timezone.now()
+        end = parse_aware_datetime(request.GET.get("end"))
+
+        if end and end <= start:
+            end = None
+
+        if not end:
+            end = start + timedelta(days=30)
+
+        interlocks = get_reservable_interlocks(request.user)
+
+        reservations = InterlockReservation.objects.filter(
+            interlock__in=interlocks, cancelled=False, end_time__gte=start
+        )
+
+        if end:
+            reservations = reservations.filter(start_time__lte=end)
+
+        reservations = reservations.select_related(
+            "user__profile", "created_by__profile", "interlock"
+        ).order_by("start_time")
+
+        reservations_by_interlock = defaultdict(list)
+        for reservation in reservations:
+            reservations_by_interlock[reservation.interlock_id].append(
+                serialise_reservation(reservation)
+            )
+
+        return Response(
+            {
+                "interlocks": [
+                    {
+                        "id": interlock.id,
+                        "name": interlock.name,
+                        "description": interlock.description,
+                        "lockedOut": interlock.locked_out,
+                        "offline": interlock.get_unavailable(),
+                        "reservations": reservations_by_interlock.get(interlock.id, []),
+                    }
+                    for interlock in interlocks
+                ]
+            }
+        )
+
+
 class UserAccessPermissions(APIView):
     """
     get: This method returns the current user's access permissions.
@@ -213,6 +329,103 @@ class RebootInterlock(APIView):
         interlock.log_force_rebooted()
 
         return Response({"success": interlock.reboot()})
+
+
+class InterlockReservations(APIView):
+    """List and create reservations for an interlock."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, interlock_id):
+        interlock = Interlock.objects.get(pk=interlock_id)
+
+        if not can_manage_interlock_reservations(request.user, interlock):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        now = timezone.now()
+        reservations = (
+            InterlockReservation.objects.filter(interlock=interlock, end_time__gte=now)
+            .select_related("user__profile", "created_by__profile")
+            .order_by("start_time")
+        )
+
+        return Response(
+            {"reservations": [serialise_reservation(r) for r in reservations]}
+        )
+
+    def post(self, request, interlock_id):
+        interlock = Interlock.objects.get(pk=interlock_id)
+
+        if not can_manage_interlock_reservations(request.user, interlock):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        user_id = request.data.get("userId") or request.user.id
+
+        if not request.user.is_staff and int(user_id) != request.user.id:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            reservation_user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        start_time = parse_aware_datetime(request.data.get("startTime"))
+        end_time = parse_aware_datetime(request.data.get("endTime"))
+
+        if not start_time or not end_time:
+            return Response(
+                {"error": "invalid_datetime"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if start_time >= end_time:
+            return Response(
+                {"error": "start_after_end"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if interlock.has_reservation_conflict(start_time, end_time):
+            return Response(
+                {"error": "reservation_conflict"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        reservation = InterlockReservation.objects.create(
+            interlock=interlock,
+            user=reservation_user,
+            created_by=request.user,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+        return Response(
+            serialise_reservation(reservation), status=status.HTTP_201_CREATED
+        )
+
+
+class CancelInterlockReservation(APIView):
+    """Cancel an existing interlock reservation."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, reservation_id):
+        try:
+            reservation = InterlockReservation.objects.select_related(
+                "interlock", "user__profile", "created_by__profile"
+            ).get(pk=reservation_id)
+        except InterlockReservation.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        if not (
+            request.user.is_staff
+            or reservation.user_id == request.user.id
+            or reservation.created_by_id == request.user.id
+        ):
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+        reservation.cancelled = True
+        reservation.cancellation_reason = request.data.get("reason")
+        reservation.save()
+
+        return Response(serialise_reservation(reservation))
 
 
 class SyncDoor(APIView):
