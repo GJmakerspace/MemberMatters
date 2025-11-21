@@ -40,6 +40,7 @@ export default {
     checkAccess: 'Access Permissions',
     memberbucks: 'Spacebucks',
     membershipPlan: 'Membership Plan',
+    interlockReservations: 'Interlock Reservations',
     information: 'Information Pages',
     informationAbout: 'About This Space',
     informationGuide: 'Member Guide',
@@ -317,6 +318,29 @@ export default {
     totalTime: 'Total Time',
     lastSwipe: 'Last Swipe',
     lastSeen: 'Last Seen',
+  },
+  interlockReservations: {
+    title: 'Interlock reservations',
+    description:
+      'See when tools are reserved and book a time slot that works for you.',
+    calendarHint:
+      'Times below are shown for the selected date. Use the calendar to jump to a different day.',
+    newReservation: 'Reserve time',
+    unassignedReservation: 'Reserved',
+    noInterlocks:
+      'You do not have access to any interlocks that support reservations.',
+    noReservationsForDay: 'No reservations on this day yet.',
+    createTitle: 'Reserve {name}',
+    startTime: 'Start time',
+    endTime: 'End time',
+    saveReservation: 'Save reservation',
+    invalidDate: 'Please choose a valid start and end time.',
+    startAfterEnd: 'The end time must be after the start time.',
+    reservationConflict: 'That time overlaps an existing reservation.',
+    cancelTitle: 'Cancel reservation',
+    cancelMessage:
+      'Cancel this reservation? The slot will immediately become available to others.',
+    cancelReason: 'Reason (optional)',
   },
   lastseen: {
     pageDescription:

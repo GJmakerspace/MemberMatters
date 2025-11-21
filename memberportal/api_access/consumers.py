@@ -331,7 +331,14 @@ class InterlockConsumer(AccessDeviceConsumer):
 
                         # user has access to this interlock
                         if allowed_interlocks and self.device in allowed_interlocks:
+                            active_reservation = self.device.get_active_reservation()
+
                             if (
+                                active_reservation
+                                and active_reservation.user != profile.user
+                            ):
+                                reason = "reserved_for_other"
+                            elif (
                                 profile.is_signed_into_site()
                                 or self.device.exempt_signin is True
                                 or config.ENABLE_PORTAL_SITE_SIGN_IN is False

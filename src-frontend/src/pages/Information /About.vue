@@ -1,4 +1,4 @@
-template>
+<template>
   <q-page class="row flex content-start justify-center q-pa-md">
     <div class="column info-container">
       <q-card class="q-mb-md">

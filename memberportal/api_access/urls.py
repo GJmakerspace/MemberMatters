@@ -13,6 +13,11 @@ urlpatterns = [
         name="UserAccessPermissions",
     ),
     path(
+        "api/access/interlock-reservations/",
+        views.InterlockReservationsOverview.as_view(),
+        name="InterlockReservationsOverview",
+    ),
+    path(
         "api/access/doors/<int:door_id>/authorise/<int:user_id>/",
         views.AuthoriseDoor.as_view(),
         name="AuthoriseDoor",
@@ -36,6 +41,16 @@ urlpatterns = [
         "api/access/interlocks/<int:interlock_id>/reboot/",
         views.RebootInterlock.as_view(),
         name="RebootInterlock",
+    ),
+    path(
+        "api/access/interlocks/<int:interlock_id>/reservations/",
+        views.InterlockReservations.as_view(),
+        name="InterlockReservations",
+    ),
+    path(
+        "api/access/interlock-reservations/<uuid:reservation_id>/cancel/",
+        views.CancelInterlockReservation.as_view(),
+        name="CancelInterlockReservation",
     ),
     path(
         "api/access/doors/<int:door_id>/reboot/",

@@ -220,6 +220,15 @@ const PageAndRouteConfig: PageAndRouteConfigType[] = [
         component: () => import('pages/CheckAccess.vue'),
       },
       {
+        icon: icons.calendar,
+        to: '/account/interlock-reservations',
+        name: 'interlockReservations',
+        loggedIn: true,
+        kiosk: true,
+        memberOnly: true,
+        component: () => import('pages/InterlockReservations.vue'),
+      },
+      {
         icon: icons.memberbucks,
         featureEnabledFlag: 'enableMemberBucks',
         to: '/account/memberbucks/:dialog',
